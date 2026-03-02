@@ -54,16 +54,17 @@ The FM component models:
 
 
 First-Order (Linear) Term
+
 $$
 y_{\text{order1}} = w_0 + \sum_{i=1}^{d} w_i x_i
 $$
 
 where:
-	•	$w_0$ = global bias
-	•	$w_i$ = feature weight
-
+- $w_0$ = global bias  
+- $w_i$ = feature weight  
 
 Second-Order (Pairwise) Interaction Term
+
 $$
 y_{\text{order2}} =
 \sum_{i=1}^{d} \sum_{j=i+1}^{d}
