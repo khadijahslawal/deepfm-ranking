@@ -6,3 +6,8 @@ s
 .venv/
 venv/
 ml1-final/
+*.pkl
+*.csv
+*.tsv
+data/
+.ipynb_checkpoints/
