@@ -1,34 +1,26 @@
-# deepfm-ranking
-DeepFM for Search Relevance Ranking applied to Microsoft MARCO passage ranking data
-DeepFM for Search Relevance Ranking
+# DeepFM for Search Relevance Ranking
 
-MS MARCO Passage Ranking — ML1 Final Project
+DeepFM for Search Relevance Ranking applied to Microsoft MARCO passage ranking data
 
 University of Chicago — MSc in Applied Data Science
 
-⸻
-
-1. Model Description & Applications
+## Model Description & Applications
 
 DeepFM (Deep Factorization Machine) is a neural architecture that jointly trains:
 	•	A Factorization Machine (FM) component
 	•	A Deep Neural Network (DNN) component
 
-over shared input embeddings.
-
-Introduced by Guo et al. (2017), DeepFM learns both low-order and high-order feature interactions end-to-end, without manual feature engineering.
-
+over shared input embeddings. Introduced by Guo et al. (2017), DeepFM learns both low-order and high-order feature interactions end-to-end, without manual feature engineering.
 This architecture is widely used in:
 	•	Click-through rate (CTR) prediction
 	•	Search relevance ranking
 	•	Recommendation systems
 	•	Advertising ranking systems
 
-⸻
 
-2. Key Components & Mathematical Formulation
+## Key Components & Mathematical Formulation
 
-2.1 Input Representation
+### Input Representation
 
 Let the input feature vector be:
 
@@ -53,15 +45,13 @@ $$
 \mathbf{x} = [x_1, x_2, \ldots, x_d]
 $$
 
-⸻
 
-2.2 Factorization Machine (FM) Component
+### Factorization Machine (FM) Component
 
 The FM component models:
 	•	First-order (linear) effects
 	•	Second-order (pairwise) feature interactions
 
-⸻
 
 First-Order (Linear) Term
 $$
@@ -72,7 +62,6 @@ where:
 	•	$w_0$ = global bias
 	•	$w_i$ = feature weight
 
-⸻
 
 Second-Order (Pairwise) Interaction Term
 $$
@@ -88,35 +77,29 @@ $$
 \sum{l=1}^{k} v{il} v_{jl}
 $$
 
-⸻
-
 Efficient Computation Trick
 To reduce computational complexity from $O(d^2)$ to $O(kd)$:
 
 $$
-y_{\text{order2}} =
-\frac{1}{2}
+y_{\text{order2}} = \frac{1}{2}
 \sum_{l=1}^{k}
-\left[
+\left(
 \left(
 \sum_{i=1}^{d} v_{il} x_i
 \right)^2
-
 \sum_{i=1}^{d} v_{il}^2 x_i^2
-\right]
+\right)
 $$
 
-⸻
-
 Combined FM Output
+
 $$
 y_{\text{FM}} =
 y_{\text{order1}} + y_{\text{order2}}
 $$
 
-⸻
 
-2.3 Deep Neural Network (DNN) Component
+### Deep Neural Network (DNN) Component
 
 The DNN captures:
 	•	Higher-order feature interactions
@@ -133,7 +116,6 @@ where:
 	•	$\sigma(\cdot)$ is a non-linear activation (e.g., ReLU)
 	•	$\mathbf{W}^{(l)}$ and $\mathbf{b}^{(l)}$ are trainable parameters
 
-⸻
 
 Final Prediction
 
