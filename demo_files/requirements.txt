@@ -1,6 +1,7 @@
 gradio
-torch
+torch==2.2.0
 deepctr-torch
+tensorflow-cpu
 rank-bm25
 scikit-learn
 pandas
