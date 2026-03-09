@@ -73,7 +73,7 @@ fixlen_feature_columns = (
     +
     [DenseFeat(feat, 1) for feat in DENSE_FEATURES]
 )
-
+# Edit architecture and hyperparameters as needed
 model = DeepFM(
     linear_feature_columns = fixlen_feature_columns,
     dnn_feature_columns    = fixlen_feature_columns,

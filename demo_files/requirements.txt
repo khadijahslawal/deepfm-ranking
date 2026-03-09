@@ -1,8 +1,7 @@
-gradio
-torch==2.2.0
+torch==2.6.0
 deepctr-torch
-tensorflow-cpu
+tensorflow-cpu==2.21.0
 rank-bm25
 scikit-learn
 pandas
-numpy
+numpy==1.26.4
