@@ -1,0 +1,7 @@
+gradio
+torch
+deepctr-torch
+rank-bm25
+scikit-learn
+pandas
+numpy
