@@ -11,3 +11,6 @@ ml1-final/
 *.tsv
 data/
 .ipynb_checkpoints/
+*.pt
+*.json
+*.png
