@@ -146,6 +146,14 @@ DeepFM extends this by stacking a deep neural network on top of the FM layer. Th
 3. Compute $\hat{y} = \sigma(y_{\text{FM}} + y_{\text{DNN}})$
 4. Return passages sorted by $\hat{y}$ in descending order
 
+### Ranking Mechanism 
+Given candidate passages for each query, there are a couple of options we have with regards to rankin 
+1. Point Wise Ranking
+2. List Wis Ranking
+   
+<img width="868" height="469" alt="Screenshot 2026-03-10 at 4 59 03 pm" src="https://github.com/user-attachments/assets/e668cba2-4393-4b0f-8102-8fc4899207e6" />
+
+
 #### Point Wise Ranking
 - The Pointwise Approach: We treat each query-passage pair as an independent data point. The model predicts a "relevance score" (probability from 0 to 1) for every candidate.
 - The Ranking: Even though the training data only has one "1," the model outputs a decimal score (e.g., 0.85, 0.42, 0.12) for all candidates. We then sort the list by these scores.
@@ -293,7 +301,15 @@ All features are **dense**  (continuous/binary) except `query_type_encoded` whic
 | `query_type_encoded` | Label-encoded query type (SparseFeat — gets its own embedding) |
 
 ### BM25 Computation Note
-BM25 scores are computed during feature engineering (not pre-extracted). To avoid recomputing for each row, we score each **unique query** once against all passages, then map scores back:
+
+BM25 is a widely used, keyword-based ranking function in information retrieval that ranks documents based on query term frequency, inverse document frequency, and document length normalization. It improves upon traditional TF-IDF by reducing the impact of high-frequency words, making it the standard ranking algorithm for search engines like Elasticsearch, Lucene, and OpenSearch
+
+<img width="692" height="122" alt="Screenshot 2026-03-10 at 5 10 55 pm" src="https://github.com/user-attachments/assets/824a9f80-158f-49b2-b156-9292045ae53d" />
+
+<img width="844" height="122" alt="Screenshot 2026-03-10 at 5 11 37 pm" src="https://github.com/user-attachments/assets/cb7b18c0-543c-4aa6-b07e-3fc2032db395" />
+
+
+We computed it during feature engineering (not pre-extracted). To avoid recomputing for each row, we score each **unique query** once against all passages, then map scores back:
 
 ```python
 # Efficient: score each unique query once (~6,980 calls vs ~99,840)
@@ -305,7 +321,7 @@ for _, row in tqdm(unique_queries.iterrows(), total=len(unique_queries)):
 ```
 
 ### Sharing Pre-computed Features
-Feature engineering outputs are saved as pickle files and shared via Google Drive. Teammates can skip recomputation by loading directly:
+Feature engineering outputs are saved as pickle files. 
 
 ```python
 df = pd.read_pickle('/content/drive/MyDrive/YOUR_FOLDER/df_features_enriched.pkl')
@@ -360,6 +376,32 @@ def set_seed(seed=42):
 
 set_seed(42)
 ```
+
+### Evaluation Metrics 
+
+**1. NDCG@10** (Normalized Discounted Cumulative Gain): Measures whether the most relevant documents are ranked highest, with a discount for lower positions. This is the gold standard for search evaluation and what platforms like Bing optimizes for.
+
+$$\text{NDCG@}K = \frac{\text{DCG@}K}{\text{IDCG@}K}, \quad \text{DCG@}K = \sum_{i=1}^{K} \frac{\text{rel}_i}{\log_2(i+1)}$$
+
+**2. MRR** (Mean Reciprocal Rank): What rank did the first relevant document appear at?
+
+$$\text{MRR} = \frac{1}{|Q|} \sum_{q \in Q} \frac{1}{\text{rank}_q}$$
+
+where $\text{rank}_q$ is the position of the first relevant passage for query $q$.
+
+**3. MAP** (Mean Average Precision): Across all queries, how consistently is the model ranking relevant passages near the top
+
+$$\text{MAP} = \frac{1}{|Q|} \sum_{q \in Q} \text{AP}(q), \quad \text{AP}(q) = \frac{1}{R_q} \sum_{k=1}^{K} P(k) \cdot \text{rel}(k)$$
+
+where $R_q$ is the total number of relevant passages for query $q$, $P(k)$ is precision at rank $k$, and $\text{rel}(k) = 1$ if the passage at rank $k$ is relevant.
+
+**4. AUC** (Area Under the ROC Curve):
+
+$$\text{AUC} = P(\hat{y}_{\text{relevant}} > \hat{y}_{\text{irrelevant}})$$
+
+where $\hat{y}$ is the model's predicted relevance score. AUC measures the probability 
+that a randomly chosen relevant passage is scored higher than a randomly chosen 
+irrelevant one.
 
 ### Sensitivity Analysis
 We ran hyperparameter sensitivity analysis varying architecture size and dropout, using early stopping (`patience=3`) to ensure fair comparison:
