@@ -123,9 +123,59 @@ DeepFM extends this by stacking a deep neural network on top of the FM layer. Th
 
 <img width="890" height="570" alt="Screenshot 2026-03-10 at 4 18 52 pm" src="https://github.com/user-attachments/assets/e1ef9a06-f195-4491-b1d2-8b40312cc3ef" />
 
+### Training Algorithm
 
-### Package
-We use the [`deepctr-torch`](https://github.com/shenweichen/DeepCTR-Torch) library:
+**Input:** Training set $\{(x_i, y_i)\}_{i=1}^N$ for i = 1,...,N, learning rate $\eta$, embedding dim $k$, DNN layers $[h_1, h_2, \ldots]$
+
+**Algorithm:**
+1. Initialize embedding vectors $\mathbf{v}_i \sim \mathcal{N}(0, 0.01)$ for all features
+2. Initialize DNN weights $\mathbf{W}^{(l)}$ via Xavier initialization
+3. **For** each mini-batch $\mathcal{B}$:
+   - a. Compute $y_{\text{FM}}$ via first + second order terms
+   - b. Compute $y_{\text{DNN}}$ via forward pass through hidden layers
+   - c. Compute $\hat{y} = \sigma(y_{\text{FM}} + y_{\text{DNN}})$
+   - d. Compute loss $\mathcal{L}$
+   - e. Backpropagate gradients through both components (shared embedding receives gradients from both paths)
+   - f. Update all parameters via Adam: $\theta \leftarrow \theta - \eta \cdot \hat{m} / (\sqrt{\hat{v}} + \epsilon)$
+4. Evaluate on validation set after each epoch
+5. Early stop if validation loss does not improve for $p$ epochs
+
+**Inference (Ranking):**
+1. For a query $q$ and candidate passages $\{p_1, \ldots, p_K\}$
+2. Extract features $\mathbf{x}_{q,p_j}$ for each pair
+3. Compute $\hat{y} = \sigma(y_{\text{FM}} + y_{\text{DNN}})$
+4. Return passages sorted by $\hat{y}$ in descending order
+
+#### Point Wise Ranking
+- The Pointwise Approach: We treat each query-passage pair as an independent data point. The model predicts a "relevance score" (probability from 0 to 1) for every candidate.
+- The Ranking: Even though the training data only has one "1," the model outputs a decimal score (e.g., 0.85, 0.42, 0.12) for all candidates. We then sort the list by these scores.
+- The Goal: If the model is working, that single "selected" if is_selected = 1 passage should end up with the highest score and sit at Rank #1.
+
+#### Listwise Ranking (Search Engine Standard)
+- The Concept: The model looks at the entire list of candidate documents for a query all at once and tries to optimize the order to maximize a metric like NDCG.
+- The Challenge: Implementation is much harder. Many libraries don't support listwise loss functions natively without complex custom code.
+
+> We used a point wise ranking
+
+### Package Selection
+
+Several Python libraries support factorization machine based models for ranking and CTR prediction:
+
+| Library | Language | Notes |
+|---------|----------|-------|
+| [`deepctr-torch`](https://github.com/shenweichen/DeepCTR-Torch) | PyTorch | DeepFM + many CTR models, GPU support, active maintenance |
+| [`deepctr`](https://github.com/shenweichen/DeepCTR) | TensorFlow/Keras | Same author, TF version of above |
+| [`xlearn`](https://github.com/aksnzhy/xlearn) | C++/Python | Fast FM and FFM, but no deep component |
+| [`pytorch-fm`](https://github.com/rixwew/pytorch-factorization-machines) | PyTorch | Lightweight FM implementations, limited model variety |
+| [`RecBole`](https://recbole.io/) | PyTorch | Full recommendation framework, includes DeepFM but heavy overhead |
+
+**We selected `deepctr-torch` for the following reasons:**
+
+- **Direct DeepFM implementation**: purpose-built for DeepFM and other CTR models with a clean, well-documented API
+- **PyTorch backend**: native GPU support, compatible with our training environment
+- **`SparseFeat` and `DenseFeat` abstractions**: handles our mixed feature types (dense + sparse) cleanly without manual preprocessing
+- **Lightweight**: unlike RecBole, it imposes no framework overhead or rigid data format requirements, making it straightforward to integrate into a custom pipeline
+- **Active maintenance**: well-maintained with clear documentation and examples
 
 ```bash
 pip install deepctr-torch
@@ -168,9 +218,33 @@ where $\sigma$ is sigmoid for binary relevance prediction.
 
 ## 3. Feature Engineering
 
-We engineer 22 features across 4 categories. All features are **dense** (continuous/binary) except `query_type_encoded` which is sparse (categorical embedding).
+The raw MS MARCO dataset provides only: `query`, `query_id`, `query_type`,  and nested `passages` (containing `passage_text` and `is_selected`). **All features were engineered from scratch.** 
 
-### Category 1: Lexical Matching
+#### Baseline Features 
+
+We began with 9 baseline features covering the core signals for passage ranking:
+
+| Feature | How it's computed |
+|---------|------------------|
+| `query_length` | Word count of query string |
+| `passage_length` | Word count of passage string |
+| `length_ratio` | query_length / (passage_length + 1) |
+| `exact_match` | Binary — full query string appears verbatim in passage |
+| `query_term_coverage` | Fraction of query words found in passage |
+| `jaccard_similarity` | Jaccard similarity between query and passage word sets |
+| `tfidf_cosine_sim` | TF-IDF cosine similarity (n-grams 1-2, 50k vocab) |
+| `bm25_score` | BM25 relevance score computed via `rank_bm25` |
+| `passage_position` | Index of passage in the original candidate list |
+
+#### Enriched Features
+We further expanded to **22 features across 4 categories**,  adding richer lexical, numeric, and query-type signals.
+All features are **dense**  (continuous/binary) except `query_type_encoded` which is sparse (categorical embedding).
+
+
+### Features Category 1: Lexical Matching
+
+*"Do the query words actually appear in the passage? Do they mean the same thing, even with different words?"*
+
 | Feature | Description |
 |---------|-------------|
 | `bm25_score` | BM25 relevance score between query and passage |
@@ -183,7 +257,10 @@ We engineer 22 features across 4 categories. All features are **dense** (continu
 | `jaccard_similarity` | Jaccard similarity between query and passage word sets |
 | `max_tfidf_term` | Maximum TF-IDF score of any query term in the passage |
 
-### Category 2: Statistical / Length Features
+### Features Category 2: Statistical / Length Features
+
+*"What does the structure of the passage tell us?" e.g  Longer passages may dilute relevance*
+
 | Feature | Description |
 |---------|-------------|
 | `query_length` | Number of words in query |
@@ -191,14 +268,20 @@ We engineer 22 features across 4 categories. All features are **dense** (continu
 | `length_ratio` | query_length / (passage_length + 1) |
 | `passage_position` | Index of passage in the original candidate list |
 
-### Category 3: Numeric Content Features
+### Features Category 3: Numeric Content Features
+
+*Does the query ask for a number, and does the passage deliver one? "how many calories in an egg?" should contain digits.*
+
 | Feature | Description |
 |---------|-------------|
 | `passage_has_number` | Binary — passage contains digits |
 | `query_has_number` | Binary — query contains digits |
 | `both_have_number` | Binary — both query and passage contain digits |
 
-### Category 4: Query Type Interaction Features
+### Features Category 4: Query Type Interaction Features
+
+*What kind of answer does this query expect, and does the passage match that intent? e.g a description query rewards longer explanatory passages, an entity query rewards exact name matches*
+
 | Feature | Description |
 |---------|-------------|
 | `is_numeric` | Binary — query type is NUMERIC |
