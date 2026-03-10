@@ -388,12 +388,12 @@ model.eval()
 
 ```
 ├── notebooks/
-│   ├── 01_data_loading.ipynb
-│   ├── 02_feature_engineering.ipynb
-│   └── 03_model_training.ipynb
+│   ├── 1_feature_engineering.ipynb
+│   └── 2_model_training.ipynb
 │
 ├── models/
 │   ├── deepfm_final.pt          # Full model object
+    ├── deepfm_best.pt           # Full model object
 │   ├── deepfm_parsimonious.pt   # Parsimonious model
 │   └── model_config.json        # Architecture config
 │
