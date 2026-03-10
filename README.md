@@ -274,7 +274,7 @@ We measured feature importance by shuffling each feature on the trained model an
 | `bm25_score` | +0.0036 ± 0.0022 | Genuine positive contributor — modest but present |
 | `trigram_overlap` | -0.0009 ± 0.0005 | Only noise feature — too sparse beyond TF-IDF signal |
 
-![](images/permutation.png "Permutation Importance")
+![](images/permutation_importance.png "Permutation Importance")
 
 ### Feature Ablation
 We retrained the model with one feature dropped at a time (10 epochs, same seed) to measure each feature's contribution during learning:
@@ -295,6 +295,8 @@ We retrained the model with one feature dropped at a time (10 epochs, same seed)
 - **Query type features punch above their weight** — `is_numeric`, `is_description`, `is_entity` and their interactions all contribute positively in both analyses
 - **`bigram_overlap` is the only consistent noise feature** — redundant given TF-IDF already captures n-gram overlap via `ngram_range=(1,2)`
 - **`bm25_score` shows feature redundancy vs reliance** — ranked low in ablation (other features compensate during retraining) but shows genuine positive reliance after training (+0.0036), a known phenomenon in feature importance analysis
+
+![](images/feature_ablation.png "Feature Ablation")
 
 ### Parsimonious Model
 Guided by permutation importance, we trained a reduced model using only the 7 most informative features:
