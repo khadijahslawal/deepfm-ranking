@@ -258,54 +258,44 @@ We ran hyperparameter sensitivity analysis varying architecture size and dropout
 ### Permutation Importance
 We measured feature importance by shuffling each feature on the trained model and measuring the resulting performance drop (averaged over 5 repeats):
 
-| Feature | NDCG@10 Drop ± Std | Interpretation |
-|---------|-------------------|----------------|
-| `tfidf_cosine_sim` | +0.1173 ± 0.0054 | Dominant feature by far — the trained model relies on semantic vocabulary overlap above all else |
-| `query_term_coverage` | +0.0216 ± 0.0030 | Strong lexical matching signal |
-| `passage_has_number` | +0.0211 ± 0.0040 | Numeric content is highly discriminative for factual queries |
-| `idf_weighted_coverage` | +0.0193 ± 0.0020 | IDF-weighted matching outperforms raw coverage |
-| `is_numeric` | +0.0183 ± 0.0032 | Query type signal — model actively uses query intent |
-| `passage_position` | +0.0135 ± 0.0044 | Structural position carries meaningful relevance signal |
-| `both_have_number` | +0.0124 ± 0.0050 | Numeric content interaction consistently relied upon |
-| `passage_length` | +0.0119 ± 0.0013 | Passage quality indicator |
-| `jaccard_similarity` | +0.0098 ± 0.0009 | Consistent word overlap signal |
-| `max_tfidf_term` | +0.0078 ± 0.0050 | Meaningful but variable contribution |
-| `is_description` | +0.0071 ± 0.0029 | Query type signal for description queries |
-| `bm25_score` | +0.0036 ± 0.0022 | Genuine positive contributor — modest but present |
-| `trigram_overlap` | -0.0009 ± 0.0005 | Only noise feature — too sparse beyond TF-IDF signal |
+| Feature | NDCG@10 Drop | Interpretation |
+|---------|-------------|----------------|
+| `passage_position` | +0.0225 ± 0.0036 | Strongest signal — initial retrieval ordering carries relevance |
+| `description_x_length` | +0.0165 ± 0.0059 | Long passages help for description queries |
+| `bm25_score` | +0.0158 ± 0.0030 | Critical lexical ranking signal |
+| `tfidf_cosine_sim` | +0.0069 ± 0.0013 | Semantic vocabulary overlap |
+| `idf_weighted_coverage` | +0.0062 ± 0.0005 | IDF-weighted matching outperforms raw coverage |
+| `passage_has_number` | +0.0017 ± 0.0012 | Relevant for factual/numeric queries |
+| `bigram_overlap` | -0.0001 ± 0.0035 | Near zero — redundant with TF-IDF features |
 
 ### Feature Ablation
 We retrained the model with one feature dropped at a time (10 epochs, same seed) to measure each feature's contribution during learning:
 
-| Tier | Features | NDCG@10 Drop | Interpretation |
-|------|---------|-------------|----------------|
-| High | `passage_position` | +0.0111 | Structural position is the single strongest learning signal |
-| High | `passage_length` | +0.0070 | Longer passages tend to be more answer-rich and complete |
-| High | `passage_has_number`, `entity_x_exact_match`, `idf_weighted_coverage`, `query_term_coverage`, `is_entity` | +0.006–0.007 | Numeric content and query-passage interaction features are surprisingly informative |
-| Medium | `is_description`, `is_numeric`, `query_length`, `description_x_length`, `query_has_number`, `length_ratio` | +0.004–0.006 | Query type and structural features provide moderate collective contribution |
-| Low | `bm25_score`, `both_have_number`, `max_tfidf_term`, `numeric_x_has_number`, `jaccard_similarity`, `trigram_overlap`, `tfidf_cosine_sim`, `exact_match` | +0.001–0.004 | Weak but genuine positive contributors |
-| Noise | `bigram_overlap` | -0.0048 | Only feature that meaningfully hurts performance |
+| Feature | NDCG@10 Drop | Interpretation |
+|---------|-------------|----------------|
+| `passage_position` | +0.0111 | Most important — consistent with permutation |
+| `passage_length` | +0.0089 | Passage length is a strong quality indicator |
+| `passage_has_number` | +0.0083 | Numeric content highly relevant for factual queries |
+| `is_description` | +0.0081 | Query type features matter more than expected |
+| `idf_weighted_coverage` | +0.0077 | Richer matching signal than basic coverage |
+| `bm25_score` | +0.0044 | Positive contribution confirmed |
+| `bigram_overlap` | -0.0007 | Only feature that marginally hurts |
 
-**Key takeaways from both analyses:**
-- **`tfidf_cosine_sim` is the dominant feature in permutation importance** (+0.1173) — its drop is more than 5x larger than the next feature, revealing the trained model's heavy reliance on semantic vocabulary overlap
-- **`passage_position` leads in ablation** (+0.0111) but ranks 6th in permutation — the model learns from positional ordering but ultimately relies more on semantic similarity at inference time
-- **21 out of 22 features contribute positively in ablation** — the feature engineering process was well-targeted with very little wasted effort
-- **Query type features punch above their weight** — `is_numeric`, `is_description`, `is_entity` and their interactions all contribute positively in both analyses
-- **`bigram_overlap` is the only consistent noise feature** — redundant given TF-IDF already captures n-gram overlap via `ngram_range=(1,2)`
-- **`bm25_score` shows feature redundancy vs reliance** — ranked low in ablation (other features compensate during retraining) but shows genuine positive reliance after training (+0.0036), a known phenomenon in feature importance analysis
+### BM25: Redundancy vs Reliance
+Permutation importance and ablation revealed an apparent contradiction for `bm25_score`:
+- **Ablation** (earlier buggy run): suggested BM25 was redundant — other features compensated during retraining
+- **Permutation importance**: ranked BM25 as the 3rd most important feature
+
+This reflects **feature redundancy vs feature reliance** — correlated features like TF-IDF cosine similarity can substitute for BM25 during learning, but once trained, the model relies heavily on BM25's distinct ranking signal. This is a known phenomenon in feature importance analysis.
 
 ### Parsimonious Model
 Guided by permutation importance, we trained a reduced model using only the 7 most informative features:
 
 ```python
 PARSIMONIOUS_FEATURES = [
-    'tfidf_cosine_sim',       # dominant feature by far (+0.1173 permutation)
-    'query_term_coverage',    # strong lexical signal (+0.0216)
-    'passage_has_number',     # numeric content is discriminative (+0.0211)
-    'idf_weighted_coverage',  # weighted matching signal (+0.0193)
-    'is_numeric',             # query type signal (+0.0183)
-    'passage_position',       # structural position signal (+0.0135)
-    'both_have_number',       # numeric content interaction (+0.0124)
+    'passage_position', 'bm25_score', 'description_x_length',
+    'tfidf_cosine_sim', 'idf_weighted_coverage',
+    'passage_has_number', 'query_length'
 ]
 ```
 
