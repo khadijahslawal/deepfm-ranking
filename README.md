@@ -37,8 +37,6 @@ translates to lost users and lost revenue.
 
 <img width="808" height="402" alt="Search Ranking" src="https://github.com/user-attachments/assets/350c51c4-6156-40bb-8c40-7db76579f899" />
 
-### Task
-Given a search query and a set of candidate passages, rank the passages by relevance so that the most relevant passage appears at the top. This is the **passage re-ranking** problem — a core component of modern search engines.
 
 ### Dataset: MS MARCO v2.1
 [MS MARCO](https://microsoft.github.io/msmarco/) (Microsoft Machine Reading Comprehension) is a large-scale information retrieval benchmark built from real Bing search queries.
@@ -47,6 +45,12 @@ Given a search query and a set of candidate passages, rank the passages by relev
 from datasets import load_dataset
 dataset = load_dataset("ms_marco", "v2.1", split="validation")
 ```
+#### Raw Dataset
+The dataset is publicly available on Hugging Face. The raw structure contains 
+nested passages per query — each query maps to a `passages` dict with 
+`passage_text` (list of candidate passages) and `is_selected` (binary labels).
+
+[Explore the dataset on Hugging Face](https://huggingface.co/datasets/microsoft/ms_marco)
 
 | Property | Value |
 |----------|-------|
@@ -57,10 +61,12 @@ dataset = load_dataset("ms_marco", "v2.1", split="validation")
 | Positive rate | ~10.7% (one relevant passage per query) |
 | Query types | NUMERIC, DESCRIPTION, ENTITY, LOCATION, PERSON |
 
-### Label Structure
+#### Label Structure
+
 MS MARCO uses **pointwise binary labeling** — each query has typically one relevant passage (`is_selected=1`) and several irrelevant ones (`is_selected=0`). DeepFM learns to score the relevant passage higher than irrelevant ones, enabling ranking at inference time.
 
-### Data Pipeline
+#### Data Pipeline
+
 ```
 Raw dataset (10k rows, nested passages)
         ↓
@@ -77,6 +83,9 @@ Train/Val/Test split by query_id (70/15/15)
 
 > **Important**: We split by `query_id` (not by row) to ensure all passages for a given query stay in the same split. Splitting by row would break query groups and produce artificially inflated ranking metrics.
 
+### Task
+Given a search query and a set of candidate passages, rank the passages by relevance so that the most relevant passage appears at the top. This is the **passage re-ranking** problem; a core component of modern search engines.
+
 ---
 
 ## 2. Model: DeepFM
@@ -88,13 +97,32 @@ DeepFM (Deep Factorization Machine) is a neural architecture that jointly trains
 
 over shared input embeddings. Introduced by [Guo et al. (2017)](https://arxiv.org/abs/1703.04247), DeepFM learns both low-order and high-order feature interactions end-to-end without manual feature crossing.
 
-### Why DeepFM for Search Ranking?
+### What DeepFM does? 
 | Property | Benefit |
 |----------|---------|
 | FM component | Automatically learns pairwise feature interactions (e.g. high BM25 + short passage) |
 | Deep component | Captures complex patterns beyond pairwise (e.g. query type × passage features) |
 | Shared embeddings | FM and DNN learn from the same representation — no information loss |
 | Binary task | Directly optimizable for binary relevance labels |
+
+
+### Why DeepFM for Search Ranking?
+
+**Factorization Machine Layer**
+
+In search ranking, you have lots of features about a query-document pair: BM25 score, document length, query length, click rate, term overlap, etc. A linear model treats these independently. But interactions between features matter; a high BM25 score means something different depending on query length (short navigational queries behave differently from long informational ones).
+
+Factorization Machines learn these pairwise feature interactions automatically without having to manually engineer them. Each feature gets a learned vector (embedding), and interactions are computed as dot products between those vectors. This is efficient and works well even with sparse data.
+
+**DNN Layer**
+
+DeepFM extends this by stacking a deep neural network on top of the FM layer. The FM component captures low-order interactions (pairs), while the DNN captures higher-order and non-linear ones. Both share the same input embeddings. The final prediction combines both. 
+
+> This is the architecture that powers ranking in Alibaba's ad system, Huawei's app store, and is foundational to how modern search rankers are designed.
+
+
+<img width="890" height="570" alt="Screenshot 2026-03-10 at 4 18 52 pm" src="https://github.com/user-attachments/assets/e1ef9a06-f195-4491-b1d2-8b40312cc3ef" />
+
 
 ### Package
 We use the [`deepctr-torch`](https://github.com/shenweichen/DeepCTR-Torch) library:
