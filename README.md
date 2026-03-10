@@ -274,6 +274,8 @@ We measured feature importance by shuffling each feature on the trained model an
 | `bm25_score` | +0.0036 ± 0.0022 | Genuine positive contributor — modest but present |
 | `trigram_overlap` | -0.0009 ± 0.0005 | Only noise feature — too sparse beyond TF-IDF signal |
 
+![](images/permutation.png "Permutation Importance")
+
 ### Feature Ablation
 We retrained the model with one feature dropped at a time (10 epochs, same seed) to measure each feature's contribution during learning:
 
