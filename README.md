@@ -365,19 +365,7 @@ val_qids, test_qids   = train_test_split(temp_qids,   test_size=0.50, random_sta
 | Val | ~1,497 | ~14,966 |
 | Test | ~1,497 | ~14,966 |
 
-### Reproducibility
-```python
-def set_seed(seed=42):
-    random.seed(seed)
-    np.random.seed(seed)
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
 
-set_seed(42)
-```
 
 ### Evaluation Metrics 
 
@@ -489,6 +477,10 @@ We ran hyperparameter sensitivity analysis varying architecture size and dropout
 - Dropout=0.0 showed the weakest performance, suggesting some regularization is beneficial
 - The larger (256, 128, 64) architecture was competitive but did not meaningfully outperform the simpler (128, 64, 32) architecture — unnecessary complexity for 22 tabular features
 - We selected **(128, 64, 32) with dropout=0.3** as the final architecture based on performance, simplicity, and standard regularization practice
+
+**Selected Model (128, 64, 32) with dropout=0.3 Training**
+
+<img width="938" height="314" alt="Screenshot 2026-03-10 at 6 26 36 pm" src="https://github.com/user-attachments/assets/d74e28a5-ed42-4723-9c8c-5fb53dcfb6b7" />
 
 ---
 
