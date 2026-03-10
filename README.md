@@ -149,7 +149,7 @@ DeepFM extends this by stacking a deep neural network on top of the FM layer. Th
 ### Ranking Mechanism 
 Given candidate passages for each query, there are a couple of options we have with regards to rankin 
 1. Point Wise Ranking
-2. List Wis Ranking
+2. List Wise Ranking
    
 <img width="868" height="469" alt="Screenshot 2026-03-10 at 4 59 03 pm" src="https://github.com/user-attachments/assets/e668cba2-4393-4b0f-8102-8fc4899207e6" />
 
