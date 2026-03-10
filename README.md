@@ -383,11 +383,53 @@ set_seed(42)
 
 $$\text{NDCG@}K = \frac{\text{DCG@}K}{\text{IDCG@}K}, \quad \text{DCG@}K = \sum_{i=1}^{K} \frac{\text{rel}_i}{\log_2(i+1)}$$
 
+```python
+def compute_ndcg_at_k(df_eval, preds, k=10):
+    df_eval = df_eval.copy()
+    df_eval["pred"] = preds
+    ndcg_scores = []
+
+    for query_id, group in df_eval.groupby("query_id"):
+        group_sorted = group.sort_values("pred", ascending=False)
+        relevance = group_sorted["label"].values[:k]
+
+        dcg = sum(rel / np.log2(rank + 2) for rank, rel in enumerate(relevance))
+
+        ideal = group.sort_values("label", ascending=False)["label"].values[:k]
+        idcg = sum(rel / np.log2(rank + 2) for rank, rel in enumerate(ideal))
+
+        if idcg > 0:
+            ndcg_scores.append(dcg / idcg)
+
+    return float(np.mean(ndcg_scores)) if ndcg_scores else 0.0
+```
+
 **2. MRR** (Mean Reciprocal Rank): What rank did the first relevant document appear at?
 
 $$\text{MRR} = \frac{1}{|Q|} \sum_{q \in Q} \frac{1}{\text{rank}_q}$$
 
 where $\text{rank}_q$ is the position of the first relevant passage for query $q$.
+
+```python
+def compute_mrr(df_eval, preds):
+    df_eval = df_eval.copy()
+    df_eval["pred"] = preds
+    reciprocal_ranks = []
+
+    for query_id, group in df_eval.groupby("query_id"):
+        group_sorted = group.sort_values("pred", ascending=False)
+        relevance = group_sorted["label"].values
+
+        rr = 0.0
+        for rank, rel in enumerate(relevance, start=1):
+            if rel == 1:
+                rr = 1.0 / rank
+                break
+
+        reciprocal_ranks.append(rr)
+
+    return float(np.mean(reciprocal_ranks)) if reciprocal_ranks else 0.0
+```
 
 **3. MAP** (Mean Average Precision): Across all queries, how consistently is the model ranking relevant passages near the top
 
@@ -395,6 +437,32 @@ $$\text{MAP} = \frac{1}{|Q|} \sum_{q \in Q} \text{AP}(q), \quad \text{AP}(q) = \
 
 where $R_q$ is the total number of relevant passages for query $q$, $P(k)$ is precision at rank $k$, and $\text{rel}(k) = 1$ if the passage at rank $k$ is relevant.
 
+
+```python
+def compute_map(df_eval, preds):
+    df_eval = df_eval.copy()
+    df_eval["pred"] = preds
+    ap_scores = []
+
+    for query_id, group in df_eval.groupby("query_id"):
+        group_sorted = group.sort_values("pred", ascending=False)
+        relevance = group_sorted["label"].values
+
+        if relevance.sum() == 0:
+            continue
+
+        num_relevant = 0
+        precisions = []
+
+        for rank, rel in enumerate(relevance, start=1):
+            if rel == 1:
+                num_relevant += 1
+                precisions.append(num_relevant / rank)
+
+        ap_scores.append(np.mean(precisions))
+
+    return float(np.mean(ap_scores)) if ap_scores else 0.0
+```
 **4. AUC** (Area Under the ROC Curve):
 
 $$\text{AUC} = P(\hat{y}_{\text{relevant}} > \hat{y}_{\text{irrelevant}})$$
