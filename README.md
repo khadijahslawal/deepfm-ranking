@@ -147,7 +147,7 @@ DeepFM extends this by stacking a deep neural network on top of the FM layer. Th
 4. Return passages sorted by $\hat{y}$ in descending order
 
 ### Ranking Mechanism 
-Given candidate passages for each query, there are a couple of options we have with regards to rankin 
+Given candidate passages for each query, there are a couple of options we have with regards to ranking 
 1. Point Wise Ranking
 2. List Wise Ranking
    
