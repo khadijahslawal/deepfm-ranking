@@ -21,6 +21,22 @@
 
 ## 1. Problem Introduction & Dataset
 
+### The Problem with Search Ranking
+
+Search is everywhere; Google, Amazon, Instagram, your laptop's file system. 
+The goal of search is not just to return relevant results, but to return them 
+**in the right order**.
+
+Consider this: if the best answer to your query is ranked 10th and an irrelevant 
+result is ranked 1st, the search technically "worked" — but the user experience 
+is broken. For e-commerce sites and search engines, poor ranking order directly 
+translates to lost users and lost revenue.
+
+> **Core problem:** *How do we ensure search results are ranked in the right order 
+> of answering the given query?*
+
+<img width="808" height="402" alt="Search Ranking" src="https://github.com/user-attachments/assets/350c51c4-6156-40bb-8c40-7db76579f899" />
+
 ### Task
 Given a search query and a set of candidate passages, rank the passages by relevance so that the most relevant passage appears at the top. This is the **passage re-ranking** problem — a core component of modern search engines.
 
