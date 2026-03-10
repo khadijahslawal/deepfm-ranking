@@ -46,7 +46,7 @@ MS MARCO uses **pointwise binary labeling** — each query has typically one rel
 
 ### Data Pipeline
 ```
-Raw dataset (101k rows, nested passages)
+Raw dataset (10k rows, nested passages)
         ↓
 Explode passages → each row = one query-passage pair (~99,840 rows)
         ↓
