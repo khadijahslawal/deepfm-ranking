@@ -2,8 +2,6 @@
 
 > Applying Deep Factorization Machines to passage ranking using the MS MARCO dataset
 
-> University of Chicago — M.S in Applied Data Science
-
 > Contributors: Amulya Rayasam, Grace Rowan, Khadija Shuaib
 
 ---
